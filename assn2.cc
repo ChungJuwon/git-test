@@ -13,6 +13,8 @@ NS_LOG_COMPONENT_DEFINE ("assn2");
 int 
 main (int argc, char *argv[])
 {
+	LogComponentEnable("assn2",LOG_LEVEL_ALL);
+	LogComponentEnable("UdpEchoClientApplication",LOG_LEVEL_INFO);
 
 
   // Create nodes
@@ -41,7 +43,6 @@ main (int argc, char *argv[])
   NetDeviceContainer dRtrdDst  = p2p.Install (nRtrnDst);
 
   // Add IP addresses
-  NS_LOG_INFO ("Assign IP Addresses.");
   Ipv4AddressHelper ipv4;
   ipv4.SetBase ("10.1.1.0", "255.255.255.0");
   Ipv4InterfaceContainer iSrc1iRtr = ipv4.Assign (dSrc1dRtr);

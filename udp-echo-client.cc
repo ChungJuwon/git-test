@@ -27,7 +27,10 @@
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
 #include "ns3/trace-source-accessor.h"
+#include "ns3/seq-ts-header.h"
 #include "udp-echo-client.h"
+#include <queue>
+
 
 namespace ns3 {
 
@@ -91,6 +94,8 @@ UdpEchoClient::UdpEchoClient ()
   m_sendEvent = EventId ();
   m_data = 0;
   m_dataSize = 0;
+  seqNumber = 0;
+  lnum = -1;
 }
 
 UdpEchoClient::~UdpEchoClient()
@@ -346,6 +351,19 @@ UdpEchoClient::Send (void)
     {
       m_txTraceWithAddresses (p, localAddress, Inet6SocketAddress (Ipv6Address::ConvertFrom (m_peerAddress), m_peerPort));
     }
+  if(qq.empty()==true){
+	  SeqTsHeader seqTs;
+	  seqTs.SetSeq(seqNumber++);
+	  p->AddHeader(seqTs);
+  }
+  else{
+	  SeqTsHeader seqTs;
+	  seqTs.SetSeq(qq.front());
+	  NS_LOG_INFO("Packet Retrans:"<<qq.front());
+	  qq.pop();
+	  p->AddHeader(seqTs);
+  }
+
   m_socket->Send (p);
   ++m_sent;
 
@@ -398,6 +416,26 @@ UdpEchoClient::HandleRead (Ptr<Socket> socket)
                        Inet6SocketAddress::ConvertFrom (from).GetPort ());
         }
       socket->GetSockName (localAddress);
+
+      SeqTsHeader seqTs;
+      packet->RemoveHeader(seqTs);
+      uint32_t currentSequenceNumber = seqTs.GetSeq();
+      if(lnum+1 == currentSequenceNumber){
+	      lnum++;
+      
+      }
+      else if(lnum+1>currentSequenceNumber){
+	      NS_LOG_INFO("Receive Retrans Packet:"<<currentSequenceNumber);
+      }
+      else{
+	      for(uint32_t i=lnum+1; i<currentSequenceNumber; i++){
+		      NS_LOG_INFO("Packet Loss:"<<i);
+		      qq.push(i);
+
+	      }      
+	      lnum = currentSequenceNumber;
+      }
+
       m_rxTrace (packet);
       m_rxTraceWithAddresses (packet, from, localAddress);
     }
